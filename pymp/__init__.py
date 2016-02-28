@@ -5,15 +5,10 @@ from __future__ import print_function
 import os as _os
 import sys as _sys
 import logging as _logging
-import warnings as _warnings
-
 import multiprocessing as _multiprocessing
-import numpy as _np
 
+import pymp.shared as _shared
 import pymp.config as _config
-# pylint: disable=no-name-in-module
-from multiprocessing import Lock
-
 
 _LOGGER = _logging.getLogger(__name__)
 
@@ -22,31 +17,46 @@ class Parallel(object):
 
     """A parallel region."""
 
-    _instances = []
+    _level = 0
 
     def __init__(self,
                  num_threads=None):  # pylint: disable=redefined-outer-name
-        if num_threads is None:
-            self._num_threads = _config.num_threads
-        else:
-            self._num_threads = num_threads
+        self._num_threads = num_threads
         self._is_fork = False
-        _LOGGER.debug("Constructed `Parallel` object for %d threads.",
-                      self._num_threads)
         self._pids = []
         self._thread_num = 0
 
     def __enter__(self):
+        # pylint: disable=global-statement
         assert len(self._pids) == 0, (
             "A `Parallel` object may only be used once!"
         )
+        # pylint: disable=protected-access
+        if self._num_threads is None:
+            assert (len(_config.num_threads) == 1 or
+                    len(_config.num_threads) > Parallel._level), (
+                        "The value of PYMP_NUM_THREADS/OMP_NUM_THREADS must be "
+                        "either a single positive number or a comma-separated "
+                        "list of number per nesting level.")
+            if len(_config.num_threads) == 1:
+                self._num_threads = _config.num_threads[0]
+            else:
+                self._num_threads = _config.num_threads[Parallel._level]
         if not _config.nested:
-            assert len(Parallel._instances) == 0, (
+            assert Parallel._level == 0, (
                 "No nested parallel contexts allowed!")
-        else:
-            raise NotImplementedError("No nested support yet...")
-        _LOGGER.debug("Entering `Parallel` context. Forking...")
-        Parallel._instances.append(self)
+        _LOGGER.debug("Entering `Parallel` context (level %d). Forking...",
+                      Parallel._level)
+        Parallel._level += 1
+        # pylint: disable=protected-access
+        with _shared._NUM_PROCS.get_lock():
+            # Make sure, max threads is not exceeded.
+            if _config.thread_limit is not None:
+                # pylint: disable=protected-access
+                num_active = _shared._NUM_PROCS.value
+                self._num_threads = min(self._num_threads,
+                                        _config.thread_limit - num_active + 1)
+            _shared._NUM_PROCS.value += self._num_threads - 1
         for thread_num in range(1, self._num_threads):
             pid = _os.fork()
             if pid == 0:
@@ -55,6 +65,7 @@ class Parallel(object):
                 self._thread_num = thread_num
                 break
             else:
+                # pylint: disable=protected-access
                 self._pids.append(pid)
         if not self._is_fork:
             _LOGGER.debug("Forked to processes: %s.",
@@ -69,8 +80,10 @@ class Parallel(object):
                 _LOGGER.debug("Waiting for process %d...",
                               pid)
                 _os.waitpid(pid, 0)
-        Parallel._instances = [inst for inst in self._instances
-                               if not inst is self]
+            # pylint: disable=protected-access
+            with _shared._NUM_PROCS.get_lock():
+                _shared._NUM_PROCS.value -= len(self._pids)
+        Parallel._level -= 1
         _LOGGER.debug("Parallel region left.")
 
     @property
@@ -79,7 +92,11 @@ class Parallel(object):
         return self._thread_num
 
     def range(self, start, stop=None, step=1):
-        """Get the correctly distributed parallel chunks in a `Parallel` context."""
+        """
+        Get the correctly distributed parallel chunks.
+
+        Currently only support 'static' schedule.
+        """
         if stop is None:
             start, stop = 0, start
         full_list = range(start, stop, step)
@@ -92,32 +109,3 @@ class Parallel(object):
         start_idx = reduce(lambda x, y: x+y, schedule[:self.thread_num], 0)
         end_idx = start_idx + schedule[self._thread_num]
         return full_list[start_idx:end_idx]
-
-
-"""
-See https://docs.python.org/2/library/array.html#module-array.
-"""
-_TYPE_ASSOC_TABLE = {'uint8': 'B',
-                     'int8': 'b',
-                     'uint16': 'H',
-                     'int16': 'h',
-                     'uint32': 'I',
-                     'int32': 'i',
-                     'uint64': 'l',
-                     'int64': 'L',
-                     'float32': 'f',
-                     'float64': 'd'}
-
-def SharedArray(shape, dtype='float64'):
-    """Factory method for shared memory arrays."""
-    # pylint: disable=no-member
-    shared_arr = _multiprocessing.Array(
-        _TYPE_ASSOC_TABLE[dtype],
-        _np.zeros(_np.prod(shape), dtype=dtype),
-        lock=False)
-    with _warnings.catch_warnings():
-        # For more information on why this is necessary, see
-        # https://www.reddit.com/r/Python/comments/j3qjb/parformatlabpool_replacement
-        _warnings.simplefilter('ignore', RuntimeWarning)
-        data = _np.ctypeslib.as_array(shared_arr)
-    return data.reshape(shape)

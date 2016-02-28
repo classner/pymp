@@ -46,3 +46,12 @@ else:
             'separated list of positive integers, specifying the number '
             'of threads to use in each nested level.')
     num_threads = _num_threads_env[:]
+
+_thread_limit_env = _get_conf_value("THREAD_LIMIT")
+if _thread_limit_env is None:
+    thread_limit = None
+else:
+    thread_limit = int(_thread_limit_env)
+    assert thread_limit > 0, (
+        'The PYMP_THREAD_LIMIT/OMP_THREAD_LIMIT variable must be an intereger '
+        'greater zero!')
