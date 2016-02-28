@@ -25,6 +25,8 @@ class Parallel(object):
         self._is_fork = False
         self._pids = []
         self._thread_num = 0
+        self._lock = None
+        self._print_lock = None
 
     def __enter__(self):
         _LOGGER.debug("Entering `Parallel` context (level %d). Forking...",
@@ -33,6 +35,8 @@ class Parallel(object):
         assert len(self._pids) == 0, (
             "A `Parallel` object may only be used once!"
         )
+        self._lock = _shared.lock()
+        self._print_lock = _shared.lock()
         # pylint: disable=protected-access
         if self._num_threads is None:
             assert (len(_config.num_threads) == 1 or
@@ -100,6 +104,17 @@ class Parallel(object):
     def num_threads(self):
         """The number of threads in this context."""
         return self._num_threads
+
+    @property
+    def lock(self):
+        """Get a convenient, context specific lock."""
+        return self._lock
+
+    def print(self, *args, **kwargs):
+        """Print synchronized."""
+        with self._print_lock:
+            print(*args, **kwargs)
+            _sys.stdout.flush()
 
     def range(self, start, stop=None, step=1):
         """
