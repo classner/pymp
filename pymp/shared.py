@@ -11,7 +11,8 @@ except ImportError:
     _NP_AVAILABLE = False
 
 _MANAGER = _multiprocessing.Manager()
-_NUM_PROCS = _multiprocessing.Value('i', 1)
+_NUM_PROCS = _multiprocessing.Value('i', 1, lock=False)
+_LOCK = lock()
 
 
 """

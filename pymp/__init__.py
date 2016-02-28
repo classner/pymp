@@ -27,6 +27,8 @@ class Parallel(object):
         self._thread_num = 0
 
     def __enter__(self):
+        _LOGGER.debug("Entering `Parallel` context (level %d). Forking...",
+                      Parallel._level)
         # pylint: disable=global-statement
         assert len(self._pids) == 0, (
             "A `Parallel` object may only be used once!"
@@ -45,12 +47,10 @@ class Parallel(object):
         if not _config.nested:
             assert Parallel._level == 0, (
                 "No nested parallel contexts allowed!")
-        _LOGGER.debug("Entering `Parallel` context (level %d). Forking...",
-                      Parallel._level)
         Parallel._level += 1
         # pylint: disable=protected-access
-        with _shared._NUM_PROCS.get_lock():
-            # Make sure, max threads is not exceeded.
+        with _shared._LOCK:
+            # Make sure that max threads is not exceeded.
             if _config.thread_limit is not None:
                 # pylint: disable=protected-access
                 num_active = _shared._NUM_PROCS.value
@@ -73,23 +73,33 @@ class Parallel(object):
         return self
 
     def __exit__(self, exc_t, exc_val, exc_tb):
+        _LOGGER.debug("Leaving parallel region (%d)...", _os.getpid())
         if self._is_fork:
+            _LOGGER.debug("Process %d done. Shutting down.",
+                          _os.getpid())
             _os._exit(1)  # pylint: disable=protected-access
-        else:
-            for pid in self._pids:
-                _LOGGER.debug("Waiting for process %d...",
-                              pid)
-                _os.waitpid(pid, 0)
-            # pylint: disable=protected-access
-            with _shared._NUM_PROCS.get_lock():
-                _shared._NUM_PROCS.value -= len(self._pids)
+        for pid in self._pids:
+            _LOGGER.debug("Waiting for process %d...",
+                          pid)
+            _os.waitpid(pid, 0)
+        # pylint: disable=protected-access
+        with _shared._LOCK:
+            _shared._NUM_PROCS.value -= len(self._pids)
         Parallel._level -= 1
-        _LOGGER.debug("Parallel region left.")
+        # Reset the manager object.
+        # pylint: disable=protected-access
+        _shared._MANAGER = _multiprocessing.Manager()
+        _LOGGER.debug("Parallel region left (%d).", _os.getpid())
 
     @property
     def thread_num(self):
         """The worker index."""
         return self._thread_num
+
+    @property
+    def num_threads(self):
+        """The number of threads in this context."""
+        return self._num_threads
 
     def range(self, start, stop=None, step=1):
         """
