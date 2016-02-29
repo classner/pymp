@@ -13,6 +13,7 @@ except ImportError:
 _MANAGER = _multiprocessing.Manager()
 _NUM_PROCS = _multiprocessing.Value('i', 1, lock=False)
 _LOCK = lock()
+_PRINT_LOCK = lock()
 
 
 """
