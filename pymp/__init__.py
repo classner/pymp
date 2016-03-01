@@ -26,6 +26,11 @@ class Parallel(object):
         self._pids = []
         self._thread_num = 0
         self._lock = None
+        # Dynamic schedule management.
+        self._queues = None
+        self._assoc_loop_id = None
+        self._thread_loop_ids = None
+        self._queuelock = _shared.lock()
 
     def __enter__(self):
         _LOGGER.debug("Entering `Parallel` context (level %d). Forking...",
@@ -59,6 +64,9 @@ class Parallel(object):
                 self._num_threads = min(self._num_threads,
                                         _config.thread_limit - num_active + 1)
             _shared._NUM_PROCS.value += self._num_threads - 1
+        self._queues = [_shared.queue() for _ in range(self._num_threads)]
+        self._assoc_loop_id = _shared.list([-1] * self._num_threads)
+        self._thread_loop_ids =  _shared.list([-1] * self._num_threads)
         for thread_num in range(1, self._num_threads):
             pid = _os.fork()
             if pid == 0:
@@ -108,8 +116,10 @@ class Parallel(object):
         """Get a convenient, context specific lock."""
         return self._lock
 
+    # pylint: disable=no-self-use
     def print(self, *args, **kwargs):
         """Print synchronized."""
+        # pylint: disable=protected-access
         with _shared._PRINT_LOCK:
             print(*args, **kwargs)
             _sys.stdout.flush()
@@ -118,7 +128,7 @@ class Parallel(object):
         """
         Get the correctly distributed parallel chunks.
 
-        Currently only support 'static' schedule.
+        This corresponds to using the OpenMP 'static' schedule.
         """
         if stop is None:
             start, stop = 0, start
@@ -132,3 +142,15 @@ class Parallel(object):
         start_idx = reduce(lambda x, y: x+y, schedule[:self.thread_num], 0)
         end_idx = start_idx + schedule[self._thread_num]
         return full_list[start_idx:end_idx]
+
+    def xrange(self, start, stop=None, step=1):
+        """
+        Get an iterator for this threads chunk of work.
+
+        This corresponds to using the OpenMP 'dynamic' schedule.
+        """
+        with self._queuelock:
+            if len(self._queues) < self._range_id:
+                # There is no queue yet for this range.
+                # Create one and fill it.
+                self._queue.app

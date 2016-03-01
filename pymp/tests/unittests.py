@@ -1,5 +1,6 @@
 """Unittests for the pymp package."""
 # pylint: disable=protected-access, invalid-name
+from __future__ import print_function
 import logging
 
 import unittest
@@ -168,6 +169,33 @@ class ParallelTest(unittest.TestCase):
         thread_list = list(thread_list)
         thread_list.sort()
         self.assertTrue(thread_list == [0, 0, 1])
+
+    def test_xrange(self):
+        """Test the dynamic schedule."""
+        import pymp
+        pymp.config.thread_limit = 2
+        pymp.config.nested = True
+        tlist = pymp.shared.list()
+        with pymp.Parallel(2) as p:
+            print('test')
+            if p.thread_num == 0:
+                print('test')
+                tqueue = pymp.shared.queue()
+                tlist.append(tqueue)
+                tqueue.put(1)
+            if p.thread_num == 1:
+                print('test')
+                while len(tlist) == 0:
+                    pass
+                print('test3')
+                try:
+                    tqueue = tlist[0]
+                except Exception as ex:
+                    print(ex)
+                print('test4')
+                t = tqueue.get()
+                print('testtest')
+                print(t)
 
 
 if __name__ == '__main__':
