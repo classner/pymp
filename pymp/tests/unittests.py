@@ -5,7 +5,7 @@ import logging
 
 import unittest
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 
 class ParallelTest(unittest.TestCase):
@@ -168,34 +168,42 @@ class ParallelTest(unittest.TestCase):
                 thread_list.append(p2.thread_num)
         thread_list = list(thread_list)
         thread_list.sort()
-        self.assertTrue(thread_list == [0, 0, 1])
+        self.assertTrue(thread_list == [0, 0, 1] or
+                        thread_list == [0, 0, 1, 1])
+        # Second case if the first two threads were exiting already.
 
     def test_xrange(self):
         """Test the dynamic schedule."""
         import pymp
-        pymp.config.thread_limit = 2
+        pymp.config.thread_limit = 4
         pymp.config.nested = True
         tlist = pymp.shared.list()
-        with pymp.Parallel(2) as p:
-            print('test')
-            if p.thread_num == 0:
-                print('test')
-                tqueue = pymp.shared.queue()
-                tlist.append(tqueue)
-                tqueue.put(1)
-            if p.thread_num == 1:
-                print('test')
-                while len(tlist) == 0:
-                    pass
-                print('test3')
-                try:
-                    tqueue = tlist[0]
-                except Exception as ex:
-                    print(ex)
-                print('test4')
-                t = tqueue.get()
-                print('testtest')
-                print(t)
+        with pymp.Parallel(2):
+            with pymp.Parallel(2) as p:
+                for idx in p.xrange(5):
+                    tlist.append(idx)
+        self.assertEqual(len(tlist), 10)
+
+    def test_exceptions(self):
+        """Test raising behavior."""
+        import pymp
+        pymp.config.thread_limit = 4
+        pymp.config.nested = True
+        def exc_context():
+            """Creates a context with an Exception in a subthread."""
+            with pymp.Parallel(2) as p:
+                if p.thread_num == 1:
+                    raise Exception()
+        self.assertRaises(Exception, exc_context)
+
+    def test_print(self):
+        """Test the print method."""
+        import pymp
+        pymp.config.thread_limit = 3
+        pymp.config.nested = True
+        with pymp.Parallel(2):
+            with pymp.Parallel(2) as p:
+                p.print("Hi from thread {}.".format(p.thread_num))
 
 
 if __name__ == '__main__':

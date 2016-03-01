@@ -12,7 +12,7 @@ import pymp.config as _config
 
 _LOGGER = _logging.getLogger(__name__)
 
-# pylint: disable=too-few-public-methods
+# pylint: disable=too-few-public-methods, too-many-instance-attributes
 class Parallel(object):
 
     """A parallel region."""
@@ -27,10 +27,12 @@ class Parallel(object):
         self._thread_num = 0
         self._lock = None
         # Dynamic schedule management.
-        self._queues = None
-        self._assoc_loop_id = None
+        self._dynamic_queue = _shared.queue()
         self._thread_loop_ids = None
         self._queuelock = _shared.lock()
+        # Exception management.
+        self._exception_queue = _shared.queue()
+        self._exception_lock = _shared.lock()
 
     def __enter__(self):
         _LOGGER.debug("Entering `Parallel` context (level %d). Forking...",
@@ -64,9 +66,7 @@ class Parallel(object):
                 self._num_threads = min(self._num_threads,
                                         _config.thread_limit - num_active + 1)
             _shared._NUM_PROCS.value += self._num_threads - 1
-        self._queues = [_shared.queue() for _ in range(self._num_threads)]
-        self._assoc_loop_id = _shared.list([-1] * self._num_threads)
-        self._thread_loop_ids =  _shared.list([-1] * self._num_threads)
+        self._thread_loop_ids = _shared.list([-1] * self._num_threads)
         for thread_num in range(1, self._num_threads):
             pid = _os.fork()
             if pid == 0:
@@ -84,6 +84,9 @@ class Parallel(object):
 
     def __exit__(self, exc_t, exc_val, exc_tb):
         _LOGGER.debug("Leaving parallel region (%d)...", _os.getpid())
+        if exc_t is not None:
+            with self._exception_lock:
+                self._exception_queue.put((exc_t, exc_val, self._thread_num))
         if self._is_fork:
             _LOGGER.debug("Process %d done. Shutting down.",
                           _os.getpid())
@@ -99,6 +102,17 @@ class Parallel(object):
         # Reset the manager object.
         # pylint: disable=protected-access
         _shared._MANAGER = _multiprocessing.Manager()
+        # Take care of exceptions if necessary.
+        if self._exception_queue.empty():
+            exc_occured = False
+        else:
+            exc_occured = True
+        while not self._exception_queue.empty():
+            exc_t, exc_val, thread_num = self._exception_queue.get()
+            _LOGGER.critical("An exception occured in thread %d: (%s, %s).",
+                             thread_num, exc_t, exc_val)
+        if exc_occured:
+            raise Exception("An exception occured in this parallel context!")
         _LOGGER.debug("Parallel region left (%d).", _os.getpid())
 
     @property
@@ -116,8 +130,8 @@ class Parallel(object):
         """Get a convenient, context specific lock."""
         return self._lock
 
-    # pylint: disable=no-self-use
-    def print(self, *args, **kwargs):
+    @classmethod
+    def print(cls, *args, **kwargs):
         """Print synchronized."""
         # pylint: disable=protected-access
         with _shared._PRINT_LOCK:
@@ -149,8 +163,47 @@ class Parallel(object):
 
         This corresponds to using the OpenMP 'dynamic' schedule.
         """
+        if stop is None:
+            start, stop = 0, start
         with self._queuelock:
-            if len(self._queues) < self._range_id:
-                # There is no queue yet for this range.
-                # Create one and fill it.
-                self._queue.app
+            pool_loop_reached = max(self._thread_loop_ids)
+            # Get this loop id.
+            self._thread_loop_ids[self._thread_num] += 1
+            loop_id = self._thread_loop_ids[self._thread_num]
+            if pool_loop_reached < loop_id:
+                # No thread reached this loop yet. Set up the queue.
+                for idx in range(start, stop, step):
+                    self._dynamic_queue.put(idx)
+            # Iterate.
+            return _QueueIterator(self._dynamic_queue,
+                                  loop_id,
+                                  self)
+
+
+class _QueueIterator(object):
+
+    """Iterator to create the dynamic schedule."""
+
+    def __init__(self,
+                 queue,
+                 loop_id,
+                 pcontext):
+        self._queue = queue
+        self._loop_id = loop_id
+        self._pcontext = pcontext
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        """Iterator implementation."""
+        # pylint: disable=protected-access
+        with self._pcontext._queuelock:
+            # Check that the pool still deals with this loop.
+            # pylint: disable=protected-access
+            pool_loop_reached = max(self._pcontext._thread_loop_ids)
+            if (pool_loop_reached > self._loop_id or
+                    self._queue.empty()):
+                raise StopIteration()
+            else:
+                return self._queue.get()
