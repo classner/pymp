@@ -196,7 +196,7 @@ class ParallelTest(unittest.TestCase):
                     raise Exception()
         self.assertRaises(Exception, exc_context)
 
-    def test_print(self):
+    def test_print(self):  # pylint: disable=no-self-use
         """Test the print method."""
         import pymp
         pymp.config.thread_limit = 3

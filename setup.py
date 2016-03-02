@@ -11,7 +11,7 @@ setup(
     name='pymp',
     author='Christoph Lassner',
     author_email='mail@christophlassner.de',
-    packages=find_packages(exclude='pymptests'),
+    packages=find_packages(),
     version=VERSION,
     test_suite='pymp.tests.unittests',
     license='MIT License',
