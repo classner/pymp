@@ -147,7 +147,7 @@ be raised in the main process, which can be handled.
 ### Reductions
 
 There is no method for reductions implemented explicitly and on purpose for
-two reasons:
+four reasons:
 
 1. due to the higher level of the Python language compared to C++, it is very
 easy to create a shared list and do the reduction after the loop, which,
