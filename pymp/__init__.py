@@ -12,12 +12,14 @@ import pymp.config as _config
 
 _LOGGER = _logging.getLogger(__name__)
 
+
 # pylint: disable=too-few-public-methods, too-many-instance-attributes
 class Parallel(object):
 
     """A parallel region."""
 
     _level = 0
+    _global_master = None
 
     def __init__(self,
                  num_threads=None):  # pylint: disable=redefined-outer-name
@@ -26,6 +28,8 @@ class Parallel(object):
         self._pids = []
         self._thread_num = 0
         self._lock = None
+        if Parallel._global_master is None:
+            Parallel._global_master = _os.getpid()
         # Dynamic schedule management.
         self._dynamic_queue = _shared.queue()
         self._thread_loop_ids = None
@@ -99,9 +103,10 @@ class Parallel(object):
         with _shared._LOCK:
             _shared._NUM_PROCS.value -= len(self._pids)
         Parallel._level -= 1
-        # Reset the manager object.
-        # pylint: disable=protected-access
-        _shared._MANAGER = _multiprocessing.Manager()
+        if _os.getpid() == Parallel._global_master:
+            # Reset the manager object.
+            # pylint: disable=protected-access
+            _shared._MANAGER = _multiprocessing.Manager()
         # Take care of exceptions if necessary.
         if self._exception_queue.empty():
             exc_occured = False
