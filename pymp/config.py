@@ -37,7 +37,7 @@ else:
 _num_threads_env = _get_conf_value('NUM_THREADS')
 if _num_threads_env is None:
     # pylint: disable=no-member
-    num_threads = _multiprocessing.cpu_count()
+    num_threads = [_multiprocessing.cpu_count()]
 else:
     _num_threads_env = [int(_val) for _val in ",".split(_num_threads_env)]
     for _val in _num_threads_env:
