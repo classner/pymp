@@ -22,8 +22,12 @@ class Parallel(object):
     _global_master = None
 
     def __init__(self,
-                 num_threads=None):  # pylint: disable=redefined-outer-name
+                 num_threads=None,
+                 if_=True):  # pylint: disable=redefined-outer-name
         self._num_threads = num_threads
+        self._enabled = if_
+        if not self._enabled:
+            self._num_threads = 1
         self._is_fork = False
         self._pids = []
         self._thread_num = 0
@@ -37,6 +41,9 @@ class Parallel(object):
         # Exception management.
         self._exception_queue = _shared.queue()
         self._exception_lock = _shared.lock()
+        # Allows for self-checks.
+        self._entered = False
+        self._disposed = False
 
     def __enter__(self):
         _LOGGER.debug("Entering `Parallel` context (level %d). Forking...",
@@ -84,6 +91,7 @@ class Parallel(object):
         if not self._is_fork:
             _LOGGER.debug("Forked to processes: %s.",
                           str(self._pids))
+        self._entered = True
         return self
 
     def __exit__(self, exc_t, exc_val, exc_tb):
@@ -107,32 +115,41 @@ class Parallel(object):
             # Reset the manager object.
             # pylint: disable=protected-access
             _shared._MANAGER = _multiprocessing.Manager()
+        self._disposed = True
         # Take care of exceptions if necessary.
-        if self._exception_queue.empty():
-            exc_occured = False
+        if self._enabled:
+            while not self._exception_queue.empty():
+                exc_t, exc_val, thread_num = self._exception_queue.get()
+                _LOGGER.critical("An exception occured in thread %d: (%s, %s).",
+                                 thread_num, exc_t, exc_val)
+                raise exc_t(exc_val)
         else:
-            exc_occured = True
-        while not self._exception_queue.empty():
-            exc_t, exc_val, thread_num = self._exception_queue.get()
-            _LOGGER.critical("An exception occured in thread %d: (%s, %s).",
-                             thread_num, exc_t, exc_val)
-        if exc_occured:
-            raise Exception("An exception occured in this parallel context!")
+            if not self._exception_queue.empty():
+                raise
         _LOGGER.debug("Parallel region left (%d).", _os.getpid())
+
+    def _assert_active(self):
+        """Assert that the parallel region is active."""
+        assert self._entered and not self._disposed, (
+            "The parallel context of this object is not active!"
+        )
 
     @property
     def thread_num(self):
         """The worker index."""
+        self._assert_active()
         return self._thread_num
 
     @property
     def num_threads(self):
         """The number of threads in this context."""
+        self._assert_active()
         return self._num_threads
 
     @property
     def lock(self):
         """Get a convenient, context specific lock."""
+        self._assert_active()
         return self._lock
 
     @classmethod
@@ -149,6 +166,7 @@ class Parallel(object):
 
         This corresponds to using the OpenMP 'static' schedule.
         """
+        self._assert_active()
         if stop is None:
             start, stop = 0, start
         full_list = range(start, stop, step)
@@ -168,6 +186,7 @@ class Parallel(object):
 
         This corresponds to using the OpenMP 'dynamic' schedule.
         """
+        self._assert_active()
         if stop is None:
             start, stop = 0, start
         with self._queuelock:
