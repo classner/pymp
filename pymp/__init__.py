@@ -100,7 +100,7 @@ class Parallel(object):
             _shared._NUM_PROCS.value -= len(self._pids)
         Parallel._level -= 1
         # Reset the manager object.
-        # pylint: disable=protected-access
+        # pylint: disable=protected-access, no-member
         _shared._MANAGER = _multiprocessing.Manager()
         # Take care of exceptions if necessary.
         if self._exception_queue.empty():
@@ -192,8 +192,12 @@ class _QueueIterator(object):
         self._loop_id = loop_id
         self._pcontext = pcontext
 
+    # pylint: disable=non-iterator-returned
     def __iter__(self):
         return self
+
+    def __next__(self):
+        return self.next()
 
     def next(self):
         """Iterator implementation."""
