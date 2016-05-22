@@ -56,7 +56,7 @@ python setup.py develop
 ```
 
 In theory, Python 3.2 and Python 3.3 should be supported as well. For some
-reason, the travis-ci builds hand AFTER completing the test runs. If someone
+reason, the travis-ci builds hang AFTER completing the test runs. If someone
 confirms successful testing on these versions, please let me know so that I
 include them in the compatibility list.
 
