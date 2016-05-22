@@ -43,9 +43,8 @@ def array(shape, dtype='float64', autolock=False):
         # For more information on why this is necessary, see
         # https://www.reddit.com/r/Python/comments/j3qjb/parformatlabpool_replacement
         _warnings.simplefilter('ignore', RuntimeWarning)
-        data = _np.ctypeslib.as_array(shared_arr)
-    return data.reshape(shape)
-
+        data = _np.ctypeslib.as_array(shared_arr).reshape(shape)
+    return data
 
 def list(*args, **kwargs):  # pylint: disable=redefined-builtin
     """Create a shared list."""

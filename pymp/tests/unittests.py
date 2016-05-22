@@ -205,6 +205,42 @@ class ParallelTest(unittest.TestCase):
             with pymp.Parallel(2) as p:
                 p.print("Hi from thread {}.".format(p.thread_num))
 
+    def test_safety_check(self):
+        """Test that the methods can only be used within their context."""
+        import pymp
+        pymp.config.thread_limit = 3
+        pymp.config.nested = True
+        p = pymp.Parallel(2)
+        # Exception before use.
+        self.assertRaises(AssertionError, lambda: p.thread_num)
+        self.assertRaises(AssertionError, lambda: p.num_threads)
+        self.assertRaises(AssertionError, lambda: p.lock)
+        self.assertRaises(AssertionError, lambda: p.range(10))
+        self.assertRaises(AssertionError, lambda: p.xrange(10))
+        with p:
+            pass
+        # Exception after use.
+        self.assertRaises(AssertionError, lambda: p.thread_num)
+        self.assertRaises(AssertionError, lambda: p.num_threads)
+        self.assertRaises(AssertionError, lambda: p.lock)
+        self.assertRaises(AssertionError, lambda: p.range(10))
+        self.assertRaises(AssertionError, lambda: p.xrange(10))
+
+    def test_if(self):
+        """Test the if_ deactivation."""
+        import pymp
+        pymp.config.thread_limit = 3
+        pymp.config.nested = True
+        with pymp.Parallel(if_=False) as p:
+            self.assertEqual(p.num_threads, 1)
+
+    def test_noreshape(self):
+        """Test if reshaping is effectively prevented."""
+        import pymp
+        sa = pymp.shared.array((3, 3))
+        self.assertRaises(ValueError, lambda: sa.reshape((4, 4)))
+        sa.reshape((1, 3, 3))
+
 
 if __name__ == '__main__':
     unittest.main()
