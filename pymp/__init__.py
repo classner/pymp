@@ -81,7 +81,7 @@ class Parallel(object):
         self._thread_loop_ids = _shared.list([-1] * self._num_threads)
         for thread_num in range(1, self._num_threads):
             pid = _os.fork()
-            if pid == 0:
+            if pid == 0:  # pragma: no cover
                 # Forked process.
                 self._is_fork = True
                 self._thread_num = thread_num
@@ -100,7 +100,7 @@ class Parallel(object):
         if exc_t is not None:
             with self._exception_lock:
                 self._exception_queue.put((exc_t, exc_val, self._thread_num))
-        if self._is_fork:
+        if self._is_fork:  # pragma: no cover
             _LOGGER.debug("Process %d done. Shutting down.",
                           _os.getpid())
             _os._exit(1)  # pylint: disable=protected-access

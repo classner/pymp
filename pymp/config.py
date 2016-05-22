@@ -28,14 +28,14 @@ def _get_conf_value(suffix):
 _nested_env = _get_conf_value('NESTED')
 if _nested_env is None:
     nested = False
-else:
+else:  # pragma: no cover
     assert _nested_env.lower() in ['true', 'false'], (
         'The configuration for PYMP_NESTED/OMP_NESTED must be either '
         'TRUE or FALSE. Is %s.', _nested_env)
     nested = _nested_env.lower() == 'true'
 
 _num_threads_env = _get_conf_value('NUM_THREADS')
-if _num_threads_env is None:
+if _num_threads_env is None:  # pragma: no cover
     # pylint: disable=no-member
     num_threads = [_multiprocessing.cpu_count()]
 else:
@@ -48,7 +48,7 @@ else:
     num_threads = _num_threads_env[:]
 
 _thread_limit_env = _get_conf_value("THREAD_LIMIT")
-if _thread_limit_env is None:
+if _thread_limit_env is None:  # pragma: no cover
     thread_limit = None
 else:
     thread_limit = int(_thread_limit_env)

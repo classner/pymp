@@ -1,17 +1,17 @@
 """Contains shared datastructures."""
 import multiprocessing as _multiprocessing
-# pylint: disable=unused-import
+# pylint: disable=unused-import, no-name-in-module
 from multiprocessing import Lock as lock, RLock as rlock
 
 import warnings as _warnings
 try:
     import numpy as _np
     _NP_AVAILABLE = True
-except ImportError:
+except ImportError:  # pragma: no cover
     _NP_AVAILABLE = False
 
-_MANAGER = _multiprocessing.Manager()
-_NUM_PROCS = _multiprocessing.Value('i', 1, lock=False)
+_MANAGER = _multiprocessing.Manager()  # pylint: disable=no-member
+_NUM_PROCS = _multiprocessing.Value('i', 1, lock=False)  # pylint: disable=no-member
 _LOCK = lock()
 _PRINT_LOCK = lock()
 
