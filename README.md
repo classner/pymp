@@ -13,7 +13,7 @@ combines them with the Python Zen of code clarity and ease-of-use.
 
 ## Usage
 
-For loops, such as:
+For-loops, such as:
 
 ```
 ex_array = np.zeros((100,), dtype='uint8')
@@ -41,7 +41,7 @@ not on Windows).
 
 ## Installation
 
-The package is available from pypi. Due to a name clash with, it is
+The package is available from pypi. Due to a name clash, it is
 available as ``pymp-pypi``:
 
 ```
