@@ -3,6 +3,8 @@
 
 [![Build Status](https://travis-ci.org/classner/pymp.svg?branch=master)](https://travis-ci.org/classner/pymp)
 [![Coverage Status](https://coveralls.io/repos/github/classner/pymp/badge.svg?branch=master)](https://coveralls.io/github/classner/pymp?branch=master)
+[![PyPI version](https://badge.fury.io/py/pymp-pypi.svg)](https://badge.fury.io/py/pymp-pypi)
+[![Python support](https://img.shields.io/badge/python-2.6%2C2.7%2C3.4%2C3.5-blue.svg)](https://travis-ci.org/classner/pymp)
 
 This package brings OpenMP-like functionality to Python. It takes the good
 qualities of OpenMP such as minimal code changes and high efficiency and
@@ -52,6 +54,11 @@ git clone https://github.com/classner/pymp.git
 cd pymp
 python setup.py develop
 ```
+
+In theory, Python 3.2 and Python 3.3 should be supported as well. For some
+reason, the travis-ci builds hand AFTER completing the test runs. If someone
+confirms successful testing on these versions, please let me know so that I
+include them in the compatibility list.
 
 ## Features
 
