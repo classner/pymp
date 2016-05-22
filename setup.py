@@ -15,4 +15,7 @@ setup(
     version=VERSION,
     test_suite='tests.unittests',
     license='MIT License',
+    url='https://github.com/classner/pymp',
+    download_url='https://github.com/classner/pymp/tarball/v{0}'.format(VERSION),
+    keywords=['multiprocessing', 'openmp', 'parallelism']
 )
