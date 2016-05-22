@@ -8,7 +8,7 @@ from setuptools import setup, find_packages
 VERSION = '0.1'
 
 setup(
-    name='pymp',
+    name='pymp-pypi',
     author='Christoph Lassner',
     author_email='mail@christophlassner.de',
     packages=find_packages(),

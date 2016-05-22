@@ -1,3 +1,4 @@
 *.pyc
 build
-pymp.egg-info
+dist
+pymp_pypi.egg-info

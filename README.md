@@ -38,12 +38,19 @@ not on Windows).
 
 ## Installation
 
-For now, please install from github by doing:
+The package is available from pypi. Due to a name clash with, it is
+available as ``pymp-pypi``:
+
+```
+pip install pymp-pypi
+```
+
+To get the cutting edge version from github, do:
 
 ```
 git clone https://github.com/classner/pymp.git
 cd pymp
-python setup.py install
+python setup.py develop
 ```
 
 ## Features
