@@ -6,7 +6,9 @@
 Welcome to pymp's documentation!
 ================================
 
-Contents:
+This documentation solely covers the API. For
+installation instructions, examples and a quick
+overview, please refer to the `github page <https://github.com/classner/pymp>`_.
 
 .. toctree::
    :maxdepth: 2
