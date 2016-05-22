@@ -13,6 +13,6 @@ setup(
     author_email='mail@christophlassner.de',
     packages=find_packages(),
     version=VERSION,
-    test_suite='pymp.tests.unittests',
+    test_suite='tests.unittests',
     license='MIT License',
 )
