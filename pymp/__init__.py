@@ -6,6 +6,7 @@ import os as _os
 import sys as _sys
 import logging as _logging
 import multiprocessing as _multiprocessing
+import functools
 
 import pymp.shared as _shared
 import pymp.config as _config
@@ -113,7 +114,7 @@ class Parallel(object):
         Parallel._level -= 1
         if _os.getpid() == Parallel._global_master:
             # Reset the manager object.
-            # pylint: disable=protected-access
+            # pylint: disable=protected-access, no-member
             _shared._MANAGER = _multiprocessing.Manager()
         self._disposed = True
         # Take care of exceptions if necessary.
@@ -176,7 +177,7 @@ class Parallel(object):
                     if thread_idx < rem else per_worker
                     for thread_idx in range(self._num_threads)]
         # pylint: disable=undefined-variable
-        start_idx = reduce(lambda x, y: x+y, schedule[:self.thread_num], 0)
+        start_idx = functools.reduce(lambda x, y: x+y, schedule[:self.thread_num], 0)
         end_idx = start_idx + schedule[self._thread_num]
         return full_list[start_idx:end_idx]
 
