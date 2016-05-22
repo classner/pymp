@@ -27,6 +27,7 @@ def _get_conf_value(suffix):
 # Initialize configuration.
 _nested_env = _get_conf_value('NESTED')
 if _nested_env is None:
+    #: Whether nesting of parallel sections is allowed.
     nested = False
 else:  # pragma: no cover
     assert _nested_env.lower() in ['true', 'false'], (
@@ -36,6 +37,8 @@ else:  # pragma: no cover
 
 _num_threads_env = _get_conf_value('NUM_THREADS')
 if _num_threads_env is None:  # pragma: no cover
+    #: The number of threads to use as default. Defaults to
+    #: CPU count.
     # pylint: disable=no-member
     num_threads = [_multiprocessing.cpu_count()]
 else:
@@ -49,6 +52,9 @@ else:
 
 _thread_limit_env = _get_conf_value("THREAD_LIMIT")
 if _thread_limit_env is None:  # pragma: no cover
+    #: The thread limit to use. This is the maximum number of TOTAL threads
+    #: in use independent of nesting. Even if more threads are requested,
+    #: the maximum can not be exceeded.
     thread_limit = None
 else:
     thread_limit = int(_thread_limit_env)

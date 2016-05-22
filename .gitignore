@@ -2,3 +2,4 @@
 build
 dist
 pymp_pypi.egg-info
+docs/_build
