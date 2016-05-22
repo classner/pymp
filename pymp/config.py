@@ -39,7 +39,7 @@ if _num_threads_env is None:
     # pylint: disable=no-member
     num_threads = [_multiprocessing.cpu_count()]
 else:
-    _num_threads_env = [int(_val) for _val in ",".split(_num_threads_env)]
+    _num_threads_env = [int(_val) for _val in _num_threads_env.split(",")]
     for _val in _num_threads_env:
         assert _val > 0, (
             'The PYMP_NUM_THREADS/OMP_NUM_THREADS variable must be a comma '
