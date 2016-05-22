@@ -8,8 +8,8 @@ python:
 
 
 install:
-  - pip install coveralls --user
-  - pip install coverage --user
+  - pip install coveralls
+  - pip install coverage
 
 script: "python setup.py test"
 
