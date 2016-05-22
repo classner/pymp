@@ -1,6 +1,9 @@
 
 # pymp
 
+[![Build Status](https://travis-ci.org/classner/pymp.svg?branch=master)](https://travis-ci.org/classner/pymp)
+[![Coverage Status](https://coveralls.io/repos/github/classner/pymp/badge.svg?branch=master)](https://coveralls.io/github/classner/pymp?branch=master)
+
 This package brings OpenMP-like functionality to Python. It takes the good
 qualities of OpenMP such as minimal code changes and high efficiency and
 combines them with the Python Zen of code clarity and ease-of-use.
@@ -141,8 +144,11 @@ with pymp.Parallel(4) as p:
 Exceptions will be noticed in the main program. However, there can be as many
 fatal Exceptions as sub-processes at the end of a parallel context. They are
 logged by the logger as `critical`, so you can always redirect their output.
-If there was an exception in the parallel context, a plain `Exception` will
-be raised in the main process, which can be handled.
+
+All exceptions will be re-raised in the main program at the end of the parallel
+section with their proper exception type and error message. It is unavoidable
+that their stack-traces are lost, unfortunately. For easy debugging, use the
+``pymp.Parallel(..., if_=False)`` flag to temporarily disable parallelism.
 
 ### Reductions
 
