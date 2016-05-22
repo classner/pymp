@@ -203,7 +203,7 @@ class ParallelTest(unittest.TestCase):
         pymp.config.nested = True
         with pymp.Parallel(2):
             with pymp.Parallel(2) as p:
-                p.print("Hi from thread {}.".format(p.thread_num))
+                p.print("Hi from thread {0}.".format(p.thread_num))
 
     def test_safety_check(self):
         """Test that the methods can only be used within their context."""

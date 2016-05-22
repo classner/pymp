@@ -17,7 +17,7 @@ def _get_conf_value(suffix):
     value = None
     for env_name in [pymp_name, omp_name]:
         # pylint: disable=no-member
-        if _os.environ.has_key(env_name):
+        if env_name in _os.environ:
             _LOGGER.debug("Using %s environment variable: %s.",
                           env_name, _os.environ[env_name])
             value = _os.environ[env_name]
