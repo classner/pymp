@@ -54,6 +54,6 @@ def dict(*args, **kwargs):  # pylint: disable=redefined-builtin
     """Create a shared dict."""
     return _MANAGER.dict(*args, **kwargs)
 
-def queue():
+def queue(*args, **kwargs):
     """Create a shared queue."""
-    return _MANAGER.Queue()
+    return _MANAGER.Queue(*args, **kwargs)
