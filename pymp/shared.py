@@ -27,6 +27,7 @@ _TYPE_ASSOC_TABLE = {'uint8': 'B',
                      'int32': 'i',
                      'uint64': 'l',
                      'int64': 'L',
+                     'float16': 'h',  # There is no float16 type, so work around.
                      'float32': 'f',
                      'float64': 'd'}
 
@@ -43,7 +44,7 @@ def array(shape, dtype='float64', autolock=False):
         # For more information on why this is necessary, see
         # https://www.reddit.com/r/Python/comments/j3qjb/parformatlabpool_replacement
         _warnings.simplefilter('ignore', RuntimeWarning)
-        data = _np.ctypeslib.as_array(shared_arr).reshape(shape)
+        data = _np.ctypeslib.as_array(shared_arr).reshape(shape).view(dtype)
     return data
 
 def list(*args, **kwargs):  # pylint: disable=redefined-builtin
