@@ -241,6 +241,49 @@ class ParallelTest(unittest.TestCase):
         self.assertRaises(ValueError, lambda: sa.reshape((4, 4)))
         sa.reshape((1, 3, 3))
 
+    def test_iterable_two_threads(self):
+        """Test if iterating over an iterable is working correctly."""
+        import pymp
+        rnge = xrange(10)
+        thread_list = pymp.shared.list()
+        with pymp.Parallel(2) as p:
+            for elem in p.iterate(rnge):
+                thread_list.append((p.thread_num, elem))
+        elements = [item[1] for item in thread_list]
+        self.assertEqual(elements, range(10))
+        threads = [item[0] for item in thread_list]
+        for item in threads:
+            self.assertEqual(item, 1)
+
+    def test_iterable_one_thread(self):
+        """Test if iterating over an iterable is working correctly."""
+        import pymp
+        rnge = xrange(10)
+        thread_list = pymp.shared.list()
+        with pymp.Parallel(1) as p:
+            for elem in p.iterate(rnge):
+                thread_list.append((p.thread_num, elem))
+        elements = [item[1] for item in thread_list]
+        self.assertEqual(elements, range(10))
+        threads = [item[0] for item in thread_list]
+        for item in threads:
+            self.assertEqual(item, 0)
+
+    def test_iterable_three_threads(self):
+        """Test if iterating over an iterable is working correctly."""
+        import pymp
+        pymp.config.thread_limit = 3
+        rnge = xrange(10)
+        thread_list = pymp.shared.list()
+        with pymp.Parallel(3) as p:
+            for elem in p.iterate(rnge):
+                thread_list.append((p.thread_num, elem))
+        elements = [item[1] for item in thread_list]
+        self.assertEqual(elements, range(10))
+        threads = [item[0] for item in thread_list]
+        for item in threads:
+            self.assertTrue(item in [1, 2])
+
 
 if __name__ == '__main__':
     unittest.main()

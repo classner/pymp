@@ -1,4 +1,4 @@
-"""Main package."""
+"""Main package."""  # pylint: disable=duplicate-code
 # pylint: disable=invalid-name
 from __future__ import print_function
 
@@ -7,6 +7,8 @@ import sys as _sys
 import logging as _logging
 import multiprocessing as _multiprocessing
 import functools
+import time as _time
+import Queue as _Queue
 
 import pymp.shared as _shared
 import pymp.config as _config
@@ -204,6 +206,32 @@ class Parallel(object):
                                   loop_id,
                                   self)
 
+    def iterate(self, iterable, element_timeout=None):
+        """
+        Iterate over an iterable.
+
+        The iterator is executed in the host thread. The threads dynamically
+        grab the elements. The iterator elements must hence be picklable to
+        be transferred through the queue.
+
+        If there is only one thread, no special operations are performed.
+        Otherwise, effectively n-1 threads are used to process the iterable
+        elements, and the host thread is used to provide them.
+
+        You can specify a timeout for the clients to adhere.
+        """
+        self._assert_active()
+        with self._queuelock:
+            # Get this loop id.
+            self._thread_loop_ids[self._thread_num] += 1
+            loop_id = self._thread_loop_ids[self._thread_num]
+            # Iterate.
+            return _IterableQueueIterator(self._dynamic_queue,
+                                          loop_id,
+                                          self,
+                                          iterable,
+                                          element_timeout)
+
 
 class _QueueIterator(object):
 
@@ -236,3 +264,67 @@ class _QueueIterator(object):
                 raise StopIteration()
             else:
                 return self._queue.get()
+
+
+class _IterableQueueIterator(object):
+
+    """Iterator for the iterable queue."""
+
+    def __init__(self,  # pylint: disable=too-many-arguments
+                 queue,
+                 loop_id,
+                 pcontext,
+                 iterable,
+                 element_timeout):
+        self._queue = queue
+        self._loop_id = loop_id
+        self._pcontext = pcontext
+        if self._pcontext.thread_num == 0:
+            self._iterable = iterable
+            self._element_timeout = element_timeout
+
+    # pylint: disable=non-iterator-returned
+    def __iter__(self):
+        if self._pcontext.num_threads == 1:
+            return iter(self._iterable)
+        else:
+            return self
+
+    def __next__(self):
+        return self.next()
+
+    def next(self):
+        """Iterator implementation."""
+        # pylint: disable=protected-access
+        while True:
+            if self._pcontext.thread_num == 0 and self._pcontext.num_threads > 1:
+                # Producer.
+                for iter_elem in self._iterable:
+                    with self._pcontext._queuelock:
+                        self._queue.put(iter_elem, timeout=self._element_timeout)
+                raise StopIteration()
+            elif self._pcontext.num_threads > 1:
+                # Consumer.
+                # Check that the pool still deals with this loop.
+                # pylint: disable=protected-access
+                with self._pcontext._queuelock:
+                    pool_loop_reached = max(self._pcontext._thread_loop_ids)
+                    master_reached = self._pcontext._thread_loop_ids[0]
+                if (pool_loop_reached > self._loop_id or (
+                        master_reached >= self._loop_id and self._queue.empty())):
+                    raise StopIteration()
+                elif master_reached < self._loop_id:
+                    # The producer did not reach this loop yet.
+                    _time.sleep(0.1)
+                    continue
+                else:
+                    try:
+                        queue_elem = self._queue.get(timeout=0.1)
+                    except _Queue.Empty:
+                        continue
+                    return queue_elem
+            else:
+                # Single thread execution.
+                # Should have never reached here, since this case is dealt with
+                # in the __iter__ method!
+                raise Exception("Internal error!")

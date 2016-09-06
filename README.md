@@ -165,6 +165,12 @@ section with their proper exception type and error message. It is unavoidable
 that their stack-traces are lost, unfortunately. For easy debugging, use the
 ``pymp.Parallel(..., if_=False)`` flag to temporarily disable parallelism.
 
+### Conditional parallelism
+
+As mentioned in the preceding paragraph, parallel execution can be disabled
+regardless of other setting by passing ``if_=False`` to the parallel region
+constructor.
+
 ### Reductions
 
 There is no method for reductions implemented explicitly and on purpose for
@@ -177,6 +183,22 @@ easy to create a shared list and do the reduction after the loop, which,
 4. perfectly deterministic.
 
 The last point is not necessarily true for OpenMP reductions.
+
+### Iterables
+
+Additional to these more traditional OpenMP functionalities, ``pymp`` provides
+a more Pythonic way of parallelization: parallel iterators. This is a
+powerful paradigm, since iterators can be stacked. ``pymp`` uses a producer-
+consumer pattern with the main thread as producer always and the rest of the
+threads as consumers of the iterable. This is as easy as
+
+```
+with pymp.Parallel(4) as p:
+    for iter_item in p.iterate(xrange(4)):
+        p.print(iter_item)
+```
+
+The iteration items must be picklable to be transferred through a queue.
 
 
 ## How does it work?
