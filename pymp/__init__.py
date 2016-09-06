@@ -43,6 +43,7 @@ class Parallel(object):
             Parallel._global_master = _os.getpid()
         # Dynamic schedule management.
         self._dynamic_queue = _shared.queue()
+        self._iter_queue = None
         self._thread_loop_ids = None
         self._queuelock = _shared.lock()
         # Exception management.
@@ -75,6 +76,7 @@ class Parallel(object):
             assert Parallel._level == 0, (
                 "No nested parallel contexts allowed!")
         Parallel._level += 1
+	self._iter_queue = _shared.queue(maxsize=self._num_threads - 1)
         # pylint: disable=protected-access
         with _shared._LOCK:
             # Make sure that max threads is not exceeded.
@@ -230,7 +232,7 @@ class Parallel(object):
             self._thread_loop_ids[self._thread_num] += 1
             loop_id = self._thread_loop_ids[self._thread_num]
             # Iterate.
-            return _IterableQueueIterator(self._dynamic_queue,
+            return _IterableQueueIterator(self._iter_queue,
                                           loop_id,
                                           self,
                                           iterable,
@@ -304,8 +306,7 @@ class _IterableQueueIterator(object):
             if self._pcontext.thread_num == 0 and self._pcontext.num_threads > 1:
                 # Producer.
                 for iter_elem in self._iterable:
-                    with self._pcontext._queuelock:
-                        self._queue.put(iter_elem, timeout=self._element_timeout)
+                    self._queue.put(iter_elem, timeout=self._element_timeout)
                 raise StopIteration()
             elif self._pcontext.num_threads > 1:
                 # Consumer.
@@ -319,7 +320,7 @@ class _IterableQueueIterator(object):
                     raise StopIteration()
                 elif master_reached < self._loop_id:
                     # The producer did not reach this loop yet.
-                    _time.sleep(0.1)
+                    _time.sleep(.1)
                     continue
                 else:
                     try:
