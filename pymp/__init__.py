@@ -76,7 +76,7 @@ class Parallel(object):
             assert Parallel._level == 0, (
                 "No nested parallel contexts allowed!")
         Parallel._level += 1
-	self._iter_queue = _shared.queue(maxsize=self._num_threads - 1)
+        self._iter_queue = _shared.queue(maxsize=self._num_threads - 1)
         # pylint: disable=protected-access
         with _shared._LOCK:
             # Make sure that max threads is not exceeded.

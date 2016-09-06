@@ -5,7 +5,7 @@ The setup script for the entire project.
 """
 from setuptools import setup, find_packages
 
-VERSION = '0.3'
+VERSION = '0.3.1'
 
 setup(
     name='pymp-pypi',
