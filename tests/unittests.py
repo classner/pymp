@@ -250,7 +250,7 @@ class ParallelTest(unittest.TestCase):
             for elem in p.iterate(rnge):
                 thread_list.append((p.thread_num, elem))
         elements = [item[1] for item in thread_list]
-        self.assertEqual(sorted(elements), range(10))
+        self.assertEqual(sorted(elements), list(range(10)))
         threads = [item[0] for item in thread_list]
         for item in threads:
             self.assertEqual(item, 1)
@@ -264,7 +264,7 @@ class ParallelTest(unittest.TestCase):
             for elem in p.iterate(rnge):
                 thread_list.append((p.thread_num, elem))
         elements = [item[1] for item in thread_list]
-        self.assertEqual(sorted(elements), range(10))
+        self.assertEqual(sorted(elements), list(range(10)))
         threads = [item[0] for item in thread_list]
         for item in threads:
             self.assertEqual(item, 0)
@@ -279,7 +279,7 @@ class ParallelTest(unittest.TestCase):
             for elem in p.iterate(rnge):
                 thread_list.append((p.thread_num, elem))
         elements = [item[1] for item in thread_list]
-        self.assertEqual(sorted(elements), range(10))
+        self.assertEqual(sorted(elements), list(range(10)))
         threads = [item[0] for item in thread_list]
         for item in threads:
             self.assertTrue(item in [1, 2])
