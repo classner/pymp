@@ -1,5 +1,5 @@
 """Main package."""  # pylint: disable=duplicate-code
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name, wrong-import-position
 from __future__ import print_function
 
 import os as _os
@@ -8,7 +8,11 @@ import logging as _logging
 import multiprocessing as _multiprocessing
 import functools
 import time as _time
-import Queue as _Queue
+_is_py2 = _sys.version[0] == '2'
+if _is_py2:
+    import Queue as _Queue  # pylint: disable=import-error
+else:
+    import queue as _Queue  # pylint: disable=import-error
 
 import pymp.shared as _shared
 import pymp.config as _config
