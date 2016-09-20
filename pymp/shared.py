@@ -16,35 +16,22 @@ _LOCK = lock()
 _PRINT_LOCK = lock()
 
 
-"""
-See https://docs.python.org/2/library/array.html#module-array.
-"""
-_TYPE_ASSOC_TABLE = {'uint8': 'B',
-                     'int8': 'b',
-                     'uint16': 'H',
-                     'int16': 'h',
-                     'uint32': 'I',
-                     'int32': 'i',
-                     'uint64': 'l',
-                     'int64': 'L',
-                     'float16': 'h',  # There is no float16 type, so work around.
-                     'float32': 'f',
-                     'float64': 'd'}
-
-def array(shape, dtype='float64', autolock=False):
-    """Factory method for shared memory arrays."""
+def array(shape, dtype=_np.float64, autolock=False):
+    """Factory method for shared memory arrays supporting all numpy dtypes."""
     assert _NP_AVAILABLE, (
         "To use the shared array object, numpy must be available!")
-    # pylint: disable=no-member
+    if not isinstance(dtype, _np.dtype):
+        dtype = _np.dtype(dtype)
+    # Not bothering to translate the numpy dtypes to ctype types directly,
+    # because they're only partially supported. Instead, create a byte ctypes
+    # array of the right size and use a view of the appropriate datatype.
     shared_arr = _multiprocessing.Array(
-        _TYPE_ASSOC_TABLE[dtype],
-        _np.zeros(_np.prod(shape), dtype=dtype),
-        lock=autolock)
+        'b', _np.prod(shape) * dtype.alignment, lock=autolock)
     with _warnings.catch_warnings():
         # For more information on why this is necessary, see
         # https://www.reddit.com/r/Python/comments/j3qjb/parformatlabpool_replacement
         _warnings.simplefilter('ignore', RuntimeWarning)
-        data = _np.ctypeslib.as_array(shared_arr).reshape(shape).view(dtype)
+        data = _np.ctypeslib.as_array(shared_arr).view(dtype).reshape(shape)
     return data
 
 def list(*args, **kwargs):  # pylint: disable=redefined-builtin
