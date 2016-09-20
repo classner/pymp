@@ -26,7 +26,9 @@ def array(shape, dtype=_np.float64, autolock=False):
     # because they're only partially supported. Instead, create a byte ctypes
     # array of the right size and use a view of the appropriate datatype.
     shared_arr = _multiprocessing.Array(
-        'b', _np.prod(shape) * dtype.alignment, lock=autolock)
+        'b',
+        _np.zeros(_np.prod(shape) * dtype.alignment, dtype=_np.byte),
+        lock=autolock)
     with _warnings.catch_warnings():
         # For more information on why this is necessary, see
         # https://www.reddit.com/r/Python/comments/j3qjb/parformatlabpool_replacement
