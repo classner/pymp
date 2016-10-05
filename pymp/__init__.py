@@ -307,6 +307,9 @@ class _IterableQueueIterator(object):
                 # Producer.
                 for iter_elem in self._iterable:
                     self._queue.put(iter_elem, timeout=self._element_timeout)
+                for _ in range(self._pcontext.num_threads - 1):
+                    self._queue.put("__queueend__:%d" % (
+                        self._pcontext._thread_loop_ids[0]))
                 raise StopIteration()
             elif self._pcontext.num_threads > 1:
                 # Consumer.
@@ -315,8 +318,7 @@ class _IterableQueueIterator(object):
                 with self._pcontext._queuelock:
                     pool_loop_reached = max(self._pcontext._thread_loop_ids)
                     master_reached = self._pcontext._thread_loop_ids[0]
-                if (pool_loop_reached > self._loop_id or (
-                        master_reached >= self._loop_id and self._queue.empty())):
+                if pool_loop_reached > self._loop_id:
                     raise StopIteration()
                 elif master_reached < self._loop_id:
                     # The producer did not reach this loop yet.
@@ -327,7 +329,10 @@ class _IterableQueueIterator(object):
                         queue_elem = self._queue.get(timeout=0.1)
                     except _Queue.Empty:
                         continue
-                    return queue_elem
+                    if queue_elem == "__queueend__:%d" % self._loop_id:
+                        raise StopIteration()
+                    else:
+                        return queue_elem
             else:
                 # Single thread execution.
                 # Should have never reached here, since this case is dealt with
