@@ -2,6 +2,7 @@
 import multiprocessing as _multiprocessing
 # pylint: disable=unused-import, no-name-in-module
 from multiprocessing import Lock as lock, RLock as rlock
+import sys as _sys
 
 import warnings as _warnings
 try:
@@ -25,10 +26,18 @@ def array(shape, dtype=_np.float64, autolock=False):
     # Not bothering to translate the numpy dtypes to ctype types directly,
     # because they're only partially supported. Instead, create a byte ctypes
     # array of the right size and use a view of the appropriate datatype.
-    shared_arr = _multiprocessing.Array(
-        'b',
-        _np.zeros(_np.prod(shape) * dtype.alignment, dtype=_np.byte),
-        lock=autolock)
+    if _sys.version_info >= (3, 0):
+        # The constructor used for Python 2 is not available any more in
+        # Python 3.
+        shared_arr = _multiprocessing.Array(
+            'b',
+            _np.zeros(_np.prod(shape) * dtype.alignment, dtype=_np.byte),
+            lock=autolock)
+    else:
+        # The constructor used for Python 3 involves a huge memory overhead in
+        # Python 2.
+        shared_arr = _multiprocessing.Array(
+            'b', _np.prod(shape) * dtype.alignment, lock=autolock)
     with _warnings.catch_warnings():
         # For more information on why this is necessary, see
         # https://www.reddit.com/r/Python/comments/j3qjb/parformatlabpool_replacement
