@@ -25,6 +25,8 @@ for index in range(0, 100):
 become:
 
 ```
+import pymp
+from __future__ import print_function  # for print() in Python 2.7.
 ex_array = pymp.shared.array((100,), dtype='uint8')
 with pymp.Parallel(4) as p:
     for index in p.range(0, 100):
