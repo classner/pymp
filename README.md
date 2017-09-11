@@ -16,6 +16,8 @@ combines them with the Python Zen of code clarity and ease-of-use.
 For-loops, such as:
 
 ```
+from __future__ import print_function
+
 ex_array = np.zeros((100,), dtype='uint8')
 for index in range(0, 100):
     ex_array[index] = 1
@@ -25,8 +27,9 @@ for index in range(0, 100):
 become:
 
 ```
+from __future__ import print_function
+
 import pymp
-from __future__ import print_function  # for print() in Python 2.7.
 ex_array = pymp.shared.array((100,), dtype='uint8')
 with pymp.Parallel(4) as p:
     for index in p.range(0, 100):
