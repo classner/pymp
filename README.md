@@ -101,18 +101,17 @@ using `pymp.range` corresponds to the `static` schedule by returning a complete
 list of indices, while `pymp.xrange` returns an iterator and corresponds to
 dynamic scheduling.
 
-Other iterators, such as `enumerate`, or simply an iterator over arbitrary
-list elements, have on purpose not been implemented to ensure efficient
-operation of the package. Using only index lists forces the user to create
-complex or large objects in memory *before* the fork. If this would not be the
-case, they would have to be serialized and forwarded through the iterator to the
-consuming process, which is not what is usually intended.
+You can use `p.iterate` to iterate over arbitrary
+list elements. However, bearing efficiency in mind you should create complex or
+large objects *before* the parallel section. Otherwise, they
+have to be serialized and forwarded through the iterator to the
+consuming process.
 
 ### Variable scopes
 
 The only implemented variable scopes are `firstprivate`, `shared` and
 `private`. All variables that are declared before the `pymp.Parallel` call
-are explicitly `firstprivate`, all variables from the `pymp.shared`
+are implicitly `firstprivate`, all variables from the `pymp.shared`
 module are shared, and all variables created within a `pymp.Parallel` context
 are private.
 
@@ -155,13 +154,13 @@ with pymp.Parallel(4) as p:
         if sec_idx == 0:
             p.print('Section 0')
         elif sec_idx == 1:
-            p.print('Secion 1')
+            p.print('Section 1')
         ...
 ```
 
 ### Exceptions
 
-Exceptions will be noticed in the main program. However, there can be as many
+Exceptions will be raised in the main program. However, there can be as many
 fatal Exceptions as sub-processes at the end of a parallel context. They are
 logged by the logger as `critical`, so you can always redirect their output.
 
@@ -173,13 +172,12 @@ that their stack-traces are lost, unfortunately. For easy debugging, use the
 ### Conditional parallelism
 
 As mentioned in the preceding paragraph, parallel execution can be disabled
-regardless of other setting by passing ``if_=False`` to the parallel region
+regardless of other settings by passing ``if_=False`` to the parallel region
 constructor.
 
 ### Reductions
 
-There is no method for reductions implemented explicitly and on purpose for
-four reasons:
+There is on purpose no method for reductions implemented for four reasons:
 
 1. due to the higher level of the Python language compared to C++, it is very
 easy to create a shared list and do the reduction after the loop, which,
