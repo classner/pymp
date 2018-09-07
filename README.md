@@ -4,7 +4,7 @@
 [![Build Status](https://travis-ci.org/classner/pymp.svg?branch=master)](https://travis-ci.org/classner/pymp)
 [![Coverage Status](https://coveralls.io/repos/github/classner/pymp/badge.svg?branch=master)](https://coveralls.io/github/classner/pymp?branch=master)
 [![PyPI version](https://badge.fury.io/py/pymp-pypi.png)](https://badge.fury.io/py/pymp-pypi)
-[![Python support](https://img.shields.io/badge/python-2.6%2C2.7%2C3.4%2C3.5%2C3.6%2C3.7-blue.svg)](https://travis-ci.org/classner/pymp)
+[![Python support](https://img.shields.io/badge/python-2.6%2C2.7%2C3.4%2C3.5%2C3.6-blue.svg)](https://travis-ci.org/classner/pymp)
 [![Documentation Status](https://readthedocs.org/projects/pymp/badge/?version=latest)](http://pymp.readthedocs.io/en/latest/?badge=latest)
 
 This package brings OpenMP-like functionality to Python. It takes the good
