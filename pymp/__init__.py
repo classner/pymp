@@ -1,21 +1,24 @@
-"""Main package."""  # pylint: disable=duplicate-code
-# pylint: disable=invalid-name, wrong-import-position
+"""Main package."""
+# pylint: disable=invalid-name, bad-continuation, len-as-condition
 from __future__ import print_function
 
-import os as _os
-import sys as _sys
+import functools as _functools
 import logging as _logging
 import multiprocessing as _multiprocessing
-import functools
+import os as _os
+import platform as _platform
+import sys as _sys
 import time as _time
-_is_py2 = _sys.version[0] == '2'
+
+import pymp.config as _config
+import pymp.shared as _shared
+
+_is_py2 = _sys.version[0] == "2"
 if _is_py2:
     import Queue as _Queue  # pylint: disable=import-error
 else:
-    import queue as _Queue  # pylint: disable=import-error
+    import queue as _Queue  # pylint: disable=import-error, E0102
 
-import pymp.shared as _shared
-import pymp.config as _config
 
 _LOGGER = _logging.getLogger(__name__)
 
@@ -28,9 +31,17 @@ class Parallel(object):
     _level = 0
     _global_master = None
 
-    def __init__(self,
-                 num_threads=None,
-                 if_=True):  # pylint: disable=redefined-outer-name
+    def __init__(
+        self, num_threads=None, if_=True
+    ):  # pylint: disable=redefined-outer-name
+        if _platform.system().startswith("Windows") or _platform.system().startswith(
+            "CYGWIN"
+        ):
+            raise Exception(
+                "Pymp relies on full 'fork' support by the operating system. "
+                "You seem to be using Windows, which unfortanetly does not "
+                "do this."
+            )
         self._num_threads = num_threads
         self._enabled = if_
         if not self._enabled:
@@ -54,27 +65,28 @@ class Parallel(object):
         self._disposed = False
 
     def __enter__(self):
-        _LOGGER.debug("Entering `Parallel` context (level %d). Forking...",
-                      Parallel._level)
-        # pylint: disable=global-statement
-        assert len(self._pids) == 0, (
-            "A `Parallel` object may only be used once!"
+        _LOGGER.debug(
+            "Entering `Parallel` context (level %d). Forking...", Parallel._level
         )
+        # pylint: disable=global-statement
+        assert len(self._pids) == 0, "A `Parallel` object may only be used once!"
         self._lock = _shared.lock()
         # pylint: disable=protected-access
         if self._num_threads is None:
-            assert (len(_config.num_threads) == 1 or
-                    len(_config.num_threads) > Parallel._level), (
-                        "The value of PYMP_NUM_THREADS/OMP_NUM_THREADS must be "
-                        "either a single positive number or a comma-separated "
-                        "list of number per nesting level.")
+            assert (
+                len(_config.num_threads) == 1
+                or len(_config.num_threads) > Parallel._level
+            ), (
+                "The value of PYMP_NUM_THREADS/OMP_NUM_THREADS must be "
+                "either a single positive number or a comma-separated "
+                "list of number per nesting level."
+            )
             if len(_config.num_threads) == 1:
                 self._num_threads = _config.num_threads[0]
             else:
                 self._num_threads = _config.num_threads[Parallel._level]
         if not _config.nested:
-            assert Parallel._level == 0, (
-                "No nested parallel contexts allowed!")
+            assert Parallel._level == 0, "No nested parallel contexts allowed!"
         Parallel._level += 1
         self._iter_queue = _shared.queue(maxsize=self._num_threads - 1)
         # pylint: disable=protected-access
@@ -83,8 +95,9 @@ class Parallel(object):
             if _config.thread_limit is not None:
                 # pylint: disable=protected-access
                 num_active = _shared._NUM_PROCS.value
-                self._num_threads = min(self._num_threads,
-                                        _config.thread_limit - num_active + 1)
+                self._num_threads = min(
+                    self._num_threads, _config.thread_limit - num_active + 1
+                )
             _shared._NUM_PROCS.value += self._num_threads - 1
         self._thread_loop_ids = _shared.list([-1] * self._num_threads)
         for thread_num in range(1, self._num_threads):
@@ -98,8 +111,7 @@ class Parallel(object):
                 # pylint: disable=protected-access
                 self._pids.append(pid)
         if not self._is_fork:
-            _LOGGER.debug("Forked to processes: %s.",
-                          str(self._pids))
+            _LOGGER.debug("Forked to processes: %s.", str(self._pids))
         self._entered = True
         return self
 
@@ -109,12 +121,10 @@ class Parallel(object):
             with self._exception_lock:
                 self._exception_queue.put((exc_t, exc_val, self._thread_num))
         if self._is_fork:  # pragma: no cover
-            _LOGGER.debug("Process %d done. Shutting down.",
-                          _os.getpid())
+            _LOGGER.debug("Process %d done. Shutting down.", _os.getpid())
             _os._exit(1)  # pylint: disable=protected-access
         for pid in self._pids:
-            _LOGGER.debug("Waiting for process %d...",
-                          pid)
+            _LOGGER.debug("Waiting for process %d...", pid)
             _os.waitpid(pid, 0)
         # pylint: disable=protected-access
         with _shared._LOCK:
@@ -129,8 +139,12 @@ class Parallel(object):
         if self._enabled:
             while not self._exception_queue.empty():
                 exc_t, exc_val, thread_num = self._exception_queue.get()
-                _LOGGER.critical("An exception occured in thread %d: (%s, %s).",
-                                 thread_num, exc_t, exc_val)
+                _LOGGER.critical(
+                    "An exception occured in thread %d: (%s, %s).",
+                    thread_num,
+                    exc_t,
+                    exc_val,
+                )
                 raise exc_t(exc_val)
         else:
             if not self._exception_queue.empty():
@@ -139,9 +153,9 @@ class Parallel(object):
 
     def _assert_active(self):
         """Assert that the parallel region is active."""
-        assert self._entered and not self._disposed, (
-            "The parallel context of this object is not active!"
-        )
+        assert (
+            self._entered and not self._disposed
+        ), "The parallel context of this object is not active!"
 
     @property
     def thread_num(self):
@@ -181,11 +195,14 @@ class Parallel(object):
         full_list = range(start, stop, step)
         per_worker = len(full_list) // self._num_threads
         rem = len(full_list) % self._num_threads
-        schedule = [per_worker + 1
-                    if thread_idx < rem else per_worker
-                    for thread_idx in range(self._num_threads)]
+        schedule = [
+            per_worker + 1 if thread_idx < rem else per_worker
+            for thread_idx in range(self._num_threads)
+        ]
         # pylint: disable=undefined-variable
-        start_idx = functools.reduce(lambda x, y: x+y, schedule[:self.thread_num], 0)
+        start_idx = _functools.reduce(
+            lambda x, y: x + y, schedule[: self.thread_num], 0
+        )
         end_idx = start_idx + schedule[self._thread_num]
         return full_list[start_idx:end_idx]
 
@@ -208,9 +225,7 @@ class Parallel(object):
                 for idx in range(start, stop, step):
                     self._dynamic_queue.put(idx)
             # Iterate.
-            return _QueueIterator(self._dynamic_queue,
-                                  loop_id,
-                                  self)
+            return _QueueIterator(self._dynamic_queue, loop_id, self)
 
     def iterate(self, iterable, element_timeout=None):
         """
@@ -232,21 +247,16 @@ class Parallel(object):
             self._thread_loop_ids[self._thread_num] += 1
             loop_id = self._thread_loop_ids[self._thread_num]
             # Iterate.
-            return _IterableQueueIterator(self._iter_queue,
-                                          loop_id,
-                                          self,
-                                          iterable,
-                                          element_timeout)
+            return _IterableQueueIterator(
+                self._iter_queue, loop_id, self, iterable, element_timeout
+            )
 
 
 class _QueueIterator(object):
 
     """Iterator to create the dynamic schedule."""
 
-    def __init__(self,
-                 queue,
-                 loop_id,
-                 pcontext):
+    def __init__(self, queue, loop_id, pcontext):
         self._queue = queue
         self._loop_id = loop_id
         self._pcontext = pcontext
@@ -265,8 +275,7 @@ class _QueueIterator(object):
             # Check that the pool still deals with this loop.
             # pylint: disable=protected-access
             pool_loop_reached = max(self._pcontext._thread_loop_ids)
-            if (pool_loop_reached > self._loop_id or
-                    self._queue.empty()):
+            if pool_loop_reached > self._loop_id or self._queue.empty():
                 raise StopIteration()
             else:
                 return self._queue.get()
@@ -276,12 +285,9 @@ class _IterableQueueIterator(object):
 
     """Iterator for the iterable queue."""
 
-    def __init__(self,  # pylint: disable=too-many-arguments
-                 queue,
-                 loop_id,
-                 pcontext,
-                 iterable,
-                 element_timeout):
+    def __init__(  # pylint: disable=too-many-arguments
+        self, queue, loop_id, pcontext, iterable, element_timeout
+    ):
         self._queue = queue
         self._loop_id = loop_id
         self._pcontext = pcontext
@@ -293,8 +299,7 @@ class _IterableQueueIterator(object):
     def __iter__(self):
         if self._pcontext.num_threads == 1:
             return iter(self._iterable)
-        else:
-            return self
+        return self
 
     def __next__(self):
         return self.next()
@@ -308,8 +313,9 @@ class _IterableQueueIterator(object):
                 for iter_elem in self._iterable:
                     self._queue.put(iter_elem, timeout=self._element_timeout)
                 for _ in range(self._pcontext.num_threads - 1):
-                    self._queue.put("__queueend__:%d" % (
-                        self._pcontext._thread_loop_ids[0]))
+                    self._queue.put(
+                        "__queueend__:%d" % (self._pcontext._thread_loop_ids[0])
+                    )
                 raise StopIteration()
             elif self._pcontext.num_threads > 1:
                 # Consumer.
