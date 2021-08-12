@@ -18,9 +18,15 @@ _LOCK = lock()
 _PRINT_LOCK = lock()
 
 
-def array(shape, dtype=_np.float64, autolock=False):
-    """Factory method for shared memory arrays supporting all numpy dtypes."""
+def array(shape, dtype=None, autolock=False):
+    """
+    Factory method for shared memory arrays supporting all numpy dtypes.
+
+    By default the dtype will be set to float64 (if dtype is None).
+    """
     assert _NP_AVAILABLE, "To use the shared array object, numpy must be available!"
+    if dtype is None:
+        dtype = _np.float64
     if not isinstance(dtype, _np.dtype):
         dtype = _np.dtype(dtype)
     # Not bothering to translate the numpy dtypes to ctype types directly,

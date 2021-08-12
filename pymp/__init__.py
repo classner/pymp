@@ -328,7 +328,7 @@ class _IterableQueueIterator(object):
                     raise StopIteration()
                 elif master_reached < self._loop_id:
                     # The producer did not reach this loop yet.
-                    _time.sleep(.1)
+                    _time.sleep(0.1)
                     continue
                 else:
                     try:
