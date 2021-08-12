@@ -4,3 +4,4 @@ dist
 pymp_pypi.egg-info
 docs/_build
 .*_cache
+.DS_Store
