@@ -3,7 +3,6 @@
 import multiprocessing as _multiprocessing
 import warnings as _warnings
 from multiprocessing import Lock as lock
-from multiprocessing import RLock as rlock
 
 try:
     import numpy as _np
