@@ -5,7 +5,7 @@ The setup script for the entire project.
 """
 from setuptools import find_packages, setup
 
-VERSION = "0.4.5"
+VERSION = "0.5.0"
 
 setup(
     name="pymp-pypi",
@@ -13,7 +13,7 @@ setup(
     author_email="mail@christophlassner.de",
     packages=find_packages(),
     version=VERSION,
-    test_suite="tests.unittests",
+    test_suite="tests.run_unittests",
     license="MIT License",
     url="https://github.com/classner/pymp",
     download_url="https://github.com/classner/pymp/tarball/v{0}".format(VERSION),

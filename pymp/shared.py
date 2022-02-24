@@ -2,6 +2,7 @@
 # pylint: disable=no-member, unused-import, ungrouped-imports
 import multiprocessing as _multiprocessing
 import warnings as _warnings
+import logging
 from multiprocessing import Lock as lock
 from multiprocessing import RLock as rlock
 
@@ -12,10 +13,31 @@ try:
 except ImportError:  # pragma: no cover
     _NP_AVAILABLE = False
 
-_MANAGER = _multiprocessing.Manager()  # pylint: disable=no-member
+_MANAGER = None
 _NUM_PROCS = _multiprocessing.Value("i", 1, lock=False)  # pylint: disable=no-member
 _LOCK = lock()
 _PRINT_LOCK = lock()
+_LOGGER = logging.getLogger(__name__)
+
+
+def _get_manager():
+    global _MANAGER, _LOCK
+    if _MANAGER is None:
+        with _LOCK:
+            if _MANAGER is None:
+                try:
+                    _MANAGER = _multiprocessing.Manager()
+                except RuntimeError as err:
+                    _LOGGER.error(
+                        "Could not create a multiprocessing manager. "
+                        "This is likely because you are calling a function "
+                        "using PyMP directly from the main script, without "
+                        "guarding it with a `if __name__ == '__main__':`. "
+                        "This is not supported. Just in case, we'll raise "
+                        "the original exception."
+                    )
+                    raise err
+    return _MANAGER
 
 
 def array(shape, dtype=None, autolock=False):
@@ -45,14 +67,14 @@ def array(shape, dtype=None, autolock=False):
 
 def list(*args, **kwargs):  # pylint: disable=redefined-builtin
     """Create a shared list."""
-    return _MANAGER.list(*args, **kwargs)
+    return _get_manager().list(*args, **kwargs)
 
 
 def dict(*args, **kwargs):  # pylint: disable=redefined-builtin
     """Create a shared dict."""
-    return _MANAGER.dict(*args, **kwargs)
+    return _get_manager().dict(*args, **kwargs)
 
 
 def queue(*args, **kwargs):
     """Create a shared queue."""
-    return _MANAGER.Queue(*args, **kwargs)
+    return _get_manager().Queue(*args, **kwargs)
